@@ -7,5 +7,5 @@ routes.use("/auth", auth);
 routes.use("/users", user);
 
 export default routes;
-// localhost: 3000 / auth / login;
+// localhost: 3000/auth /login;
 // localhost: 3000 / users / id;

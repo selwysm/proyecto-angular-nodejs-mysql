@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 import { User } from "../entity/User";
 import { AppDataSource } from "../data-source";
 
-import { validate } from "class-validator";
+import {
+  validate,
+  ValidatePromise,
+  ValidationError,
+  ValidationOptions,
+} from "class-validator";
 import { json } from "stream/consumers";
 
 export class UserController {
@@ -43,6 +48,7 @@ export class UserController {
     // TODO: HASH PASSWORD
     const userReposotory = AppDataSource.getRepository(User);
     try {
+      user.hashPassword();
       userReposotory.save(user);
     } catch (error) {
       return res.status(409).json({ message: "username alredy exist" });
@@ -64,8 +70,13 @@ export class UserController {
     } catch (error) {
       return res.status(404).json({ message: "user not found" });
     }
+    // validate error:
+    const validationOption = {
+      ValidationError: { target: false, value: false },
+    };
 
-    const errors = await validate(user);
+    const errors = await validate(user, validationOption);
+    console.log("error ---->", errors);
     if (errors.length > 0) {
       return res.status(400).json(errors);
     }
