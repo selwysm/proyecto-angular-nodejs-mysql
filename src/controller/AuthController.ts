@@ -1,8 +1,8 @@
 import { AppDataSource } from "./../data-source";
 import { Request, Response } from "express";
 import { User } from "../entity/User";
-// import { Any } from "typeorm";
-// import { Sign, sign } from "crypto";
+import { Any } from "typeorm";
+import { Sign, sign } from "crypto";
 import * as jwt from "jsonwebtoken";
 import config from "../config/config";
 import { validate } from "class-validator";
@@ -12,7 +12,9 @@ export class AuthController {
     console.log("hitting");
     const { username, password } = req.body;
     if (!(username && password)) {
-      return res.status(404).json({ message: "100656598" });
+      return res
+        .status(404)
+        .json({ message: "Username & Password are required!" });
     }
     const userReposotory = AppDataSource.getRepository(User);
     let user: User;
@@ -33,13 +35,14 @@ export class AuthController {
     const token = jwt.sign(
       { userId: user.id, username: user.username },
       config.jwtSecret,
-      { expiresIn: "1hour" }
+      { expiresIn: "1h" }
     );
-    res.json({ message: "OK", token });
+    res.json({ message: "OK", token, userId: user.id, role: user.role });
   };
   static changePassword = async (req: Request, res: Response) => {
-    const { userId } = res.locals.jwtPlayLoad;
+    const { userId } = res.locals.jwtPayLoad;
     const { oldPassword, newPassword } = req.body;
+
     if (!(oldPassword && newPassword)) {
       res
         .status(400)
@@ -49,14 +52,14 @@ export class AuthController {
     let user;
     try {
       user = await userReposotory.findOneOrFail(userId);
-    } catch (error) {
+    } catch (e) {
       res.status(401).json({ message: " somethings goes wrong " });
     }
     if (!user.changePassword(oldPassword)) {
-      res.status(401).json({ massge: "check your password" });
+      return res.status(401).json({ massge: "check your password" });
     }
     user.password = newPassword;
-    const validationOps = { ValidationError: { target: false, value: false } };
+    const validationOps = { validationError: { target: false, value: false } };
     const errors = await validate(user, validationOps);
 
     if (errors.length > 0) {
@@ -66,7 +69,7 @@ export class AuthController {
     // hash password
 
     user.hashPassword();
-    userReposotory.save(user);
+    await userReposotory.save(user);
     res.json({ message: "successful password change}" });
   };
 }

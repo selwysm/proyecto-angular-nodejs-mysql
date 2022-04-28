@@ -1,23 +1,20 @@
 import { Request, Response } from "express";
 import { User } from "../entity/User";
 import { AppDataSource } from "../data-source";
-
-import {
-  validate,
-  ValidatePromise,
-  ValidationError,
-  ValidationOptions,
-} from "class-validator";
+import { validate } from "class-validator";
 import { json } from "stream/consumers";
+import { checkJwt } from "../middlewares/jwt";
 
 export class UserController {
   static getAll = async (req: Request, res: Response) => {
     try {
       const userReposotory = AppDataSource.getRepository(User);
-      const users = await userReposotory.find();
+      const users = await userReposotory.find({
+        select: ["id", "username", "role"],
+      });
 
       res.send(users);
-    } catch (error) {
+    } catch (e) {
       res.status(404).json({ massage: " not  result" });
     }
   };
@@ -27,32 +24,35 @@ export class UserController {
     try {
       const user = await userReposotory.findOneByOrFail({ id: +id });
       res.send(user);
-    } catch (error) {
+    } catch (e) {
       res.status(404).json({ massage: "not  result" });
     }
   };
   static newUser = async (req: Request, res: Response) => {
     const { username, password, role } = req.body;
     const user = new User();
+
     user.username = username;
     user.password = password;
     user.role = role;
 
     // validate
-    console.log({ user });
-    const errors = await validate(user);
-    if (errors.length > 0) {
-      return res.status(400).json(errors);
-    }
+    // console.log({ user });
+    // const validationOpt = { validationError: { target: false, value: false } };
+    // const errors = await validate(user, validationOpt);
+    // if (errors.length > 0) {
+    //   return res.status(400).json(errors);
+    // }
 
     // TODO: HASH PASSWORD
     const userReposotory = AppDataSource.getRepository(User);
     try {
       user.hashPassword();
-      userReposotory.save(user);
-    } catch (error) {
+      await userReposotory.save(user);
+    } catch (e) {
       return res.status(409).json({ message: "username alredy exist" });
     }
+    //  all ok:
     res.send("user create");
   };
   static editUser = async (req: Request, res: Response) => {
@@ -67,15 +67,13 @@ export class UserController {
       console.log(user);
       user.username = username;
       user.role = role;
-    } catch (error) {
+    } catch (e) {
       return res.status(404).json({ message: "user not found" });
     }
     // validate error:
-    const validationOption = {
-      ValidationError: { target: false, value: false },
-    };
+    const validationOpt = { validationError: { target: false, value: false } };
 
-    const errors = await validate(user, validationOption);
+    const errors = await validate(user, validationOpt);
     console.log("error ---->", errors);
     if (errors.length > 0) {
       return res.status(400).json(errors);
@@ -84,7 +82,7 @@ export class UserController {
 
     try {
       await userReposotory.save(user);
-    } catch (error) {
+    } catch (e) {
       return res.status(409).json({ massage: "username already in use" });
     }
     res.status(201).json({ massage: " user update" });
@@ -95,11 +93,11 @@ export class UserController {
     const userReposotory = AppDataSource.getRepository(User);
     try {
       user = await userReposotory.findOneByOrFail({ id: +id });
-    } catch (error) {
+    } catch (er) {
       return res.status(404).json({ massage: "user not found" });
     }
     // remove user
-    userReposotory.delete(id);
+    await userReposotory.delete(id);
     res.status(201).json({ massage: " successful user  delete" });
   };
 }

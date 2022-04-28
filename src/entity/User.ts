@@ -9,8 +9,8 @@ import {
 import { MinLength, IsNotEmpty, IsEmail } from "class-validator";
 import * as bcrypt from "bcryptjs";
 
-@Unique(["username"])
 @Entity()
+@Unique(["username"])
 export class User {
   @PrimaryGeneratedColumn()
   id: number;

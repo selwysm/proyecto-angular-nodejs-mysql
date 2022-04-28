@@ -12,11 +12,7 @@ AppDataSource.initialize()
     const app = express();
     // middlewares
     app.use(helmet());
-    app.use(
-      cors({
-        origin: "*",
-      })
-    );
+    app.use(cors({ origin: "*" }));
     app.use(express.json());
 
     // routes
